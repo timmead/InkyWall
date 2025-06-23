@@ -138,9 +138,16 @@ def take_screenshot(target, dimensions, timeout_ms=None):
         chrome_cmd = None
         for path in chrome_paths:
             try:
-                if os.path.exists(path) or subprocess.run(["which", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-                    chrome_cmd = path
-                    break
+                # For absolute paths, just check if file exists
+                if os.path.isabs(path):
+                    if os.path.exists(path):
+                        chrome_cmd = path
+                        break
+                # For relative paths/commands, use 'which' to check if available in PATH
+                else:
+                    if subprocess.run(["which", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+                        chrome_cmd = path
+                        break
             except:
                 continue
 
@@ -152,7 +159,7 @@ def take_screenshot(target, dimensions, timeout_ms=None):
             chrome_cmd, target, "--headless",
             f"--screenshot={img_file_path}", f'--window-size={dimensions[0]},{dimensions[1]}',
             "--no-sandbox", "--disable-gpu", "--disable-software-rasterizer",
-            "--disable-dev-shm-usage", "--hide-scrollbars"
+            "--disable-dev-shm-usage", "--hide-scrollbars", "--force-device-scale-factor=1"
         ]
         if timeout_ms:
             command.append(f"--timeout={timeout_ms}")

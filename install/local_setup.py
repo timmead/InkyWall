@@ -40,9 +40,9 @@ werkzeug==3.1.3
 pillow==11.0.0
 pytz==2025.2
 openai==1.58.1
-numpy==2.2.1"""
+numpy==1.26.4"""
 
-    with open("requirements-local.txt", "w") as f:
+    with open(os.path.join(project_root, "install", "requirements-local.txt"), "w") as f:
         f.write(local_requirements)
 
     print("Created requirements-local.txt")
