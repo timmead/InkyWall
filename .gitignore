@@ -162,3 +162,8 @@ cython_debug/
 
 # Ignore Mac DS_Store files
 .DS_Store
+
+# Local development files
+install/requirements-local.txt
+src/static/images/local_outputs/
+src/static/images/current_image.png

@@ -107,14 +107,56 @@ def take_screenshot(target, dimensions, timeout_ms=None):
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as img_file:
             img_file_path = img_file.name
 
+        # Check for different Chrome/Chromium installations
+        # Prioritize chromium-headless-shell for production (Raspberry Pi)
+        # Fall back to other Chrome installations for local development
+
+        # Check if we're in local development mode from Flask app config
+        is_local_dev = False
+        try:
+            from flask import current_app
+            is_local_dev = current_app.config.get('INKYPI_LOCAL_DEV', False)
+        except RuntimeError:
+            # We're outside of Flask application context, default to production mode
+            is_local_dev = False
+
+        if is_local_dev:
+            # Local development paths (macOS first, then Linux alternatives)
+            chrome_paths = [
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",  # macOS Chrome
+                "google-chrome-stable",  # Linux alternative
+                "chromium",  # Linux alternative
+                "google-chrome",  # Linux alternative
+                "chromium-headless-shell",  # Original (try last for local dev)
+            ]
+        else:
+            # Production paths (Raspberry Pi / Linux)
+            chrome_paths = [
+                "chromium-headless-shell",  # R-Pi default
+            ]
+
+        chrome_cmd = None
+        for path in chrome_paths:
+            try:
+                if os.path.exists(path) or subprocess.run(["which", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+                    chrome_cmd = path
+                    break
+            except:
+                continue
+
+        if not chrome_cmd:
+            logger.error("No Chrome/Chromium browser found for screenshots")
+            return None
+
         command = [
-            "chromium-headless-shell", target, "--headless",
+            chrome_cmd, target, "--headless",
             f"--screenshot={img_file_path}", f'--window-size={dimensions[0]},{dimensions[1]}',
             "--no-sandbox", "--disable-gpu", "--disable-software-rasterizer",
             "--disable-dev-shm-usage", "--hide-scrollbars"
         ]
         if timeout_ms:
             command.append(f"--timeout={timeout_ms}")
+
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Check if the process failed or the output file is missing
@@ -131,5 +173,5 @@ def take_screenshot(target, dimensions, timeout_ms=None):
 
     except Exception as e:
         logger.error(f"Failed to take screenshot: {str(e)}")
-    
+
     return image

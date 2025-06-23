@@ -3,8 +3,7 @@ import json
 import logging
 
 from utils.image_utils import resize_image, change_orientation, apply_image_enhancement
-from display.inky_display import InkyDisplay
-from display.waveshare_display import WaveshareDisplay
+from display.local_display import LocalDisplay
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +14,7 @@ class DisplayManager:
     def __init__(self, device_config):
 
         """
-        Initializes the display manager and selects the correct display type 
+        Initializes the display manager and selects the correct display type
         based on the configuration.
 
         Args:
@@ -24,26 +23,35 @@ class DisplayManager:
         Raises:
             ValueError: If an unsupported display type is specified.
         """
-        
+
         self.device_config = device_config
-     
+
         display_type = device_config.get_config("display_type", default="inky")
 
-        if display_type == "inky":
-            self.display = InkyDisplay(device_config)
-        elif fnmatch.fnmatch(display_type, "epd*in*"):  
-            # derived from waveshare epd - we assume here that will be consistent
-            # otherwise we will have to enshring the manufacturer in the 
-            # display_type and then have a display_model parameter.  Will leave
-            # that for future use if the need arises.
-            #
-            # see https://github.com/waveshareteam/e-Paper
-            self.display = WaveshareDisplay(device_config)
+        if display_type == "local":
+            self.display = LocalDisplay(device_config)
+        elif display_type == "inky":
+            try:
+                from display.inky_display import InkyDisplay
+                self.display = InkyDisplay(device_config)
+            except ImportError as e:
+                logger.error(f"Cannot import InkyDisplay: {e}")
+                logger.info("Falling back to LocalDisplay for development")
+                self.display = LocalDisplay(device_config)
+        elif fnmatch.fnmatch(display_type, "epd*in*"):
+            try:
+                from display.waveshare_display import WaveshareDisplay
+                self.display = WaveshareDisplay(device_config)
+            except ImportError as e:
+                logger.error(f"Cannot import WaveshareDisplay: {e}")
+                logger.info("Falling back to LocalDisplay for development")
+                self.display = LocalDisplay(device_config)
         else:
-            raise ValueError(f"Unsupported display type: {display_type}")
+            logger.warning(f"Unsupported display type '{display_type}', using LocalDisplay")
+            self.display = LocalDisplay(device_config)
 
     def display_image(self, image, image_settings=[]):
-        
+
         """
         Delegates image rendering to the appropriate display instance.
 
@@ -57,7 +65,7 @@ class DisplayManager:
 
         if not hasattr(self, "display"):
             raise ValueError("No valid display instance initialized.")
-        
+
         # Save the image
         logger.info(f"Saving image to {self.device_config.current_image_file}")
         image.save(self.device_config.current_image_file)
