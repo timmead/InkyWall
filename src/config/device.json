@@ -23,8 +23,8 @@
         "active_playlist": "Default Playlist"
     },
     "refresh_info": {
-        "refresh_time": "2025-06-23T02:58:14.071401+00:00",
-        "image_hash": "931bef2b86de210c616e66e8b851fdb8e01ff1e9c147eaf3be9b0b5d652d0a40",
+        "refresh_time": "2025-06-27T19:39:45.006168+00:00",
+        "image_hash": "cf1623f1fa0959b9118dd3f413fd2a6e63161c1787dd94a35dd6707aac7c4a6f",
         "refresh_type": "Manual Update",
         "plugin_id": "weather"
     }

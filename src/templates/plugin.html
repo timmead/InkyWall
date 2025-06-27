@@ -33,7 +33,7 @@
             let url = '{{ url_for("plugin.update_now") }}';
             let method = 'POST';
             let clearFormOnSubmit = true;
-            
+
             // Add uploaded files to the form under its key
             Object.keys(uploadedFiles).forEach(key => {
                 if (uploadedFiles[key].length > 0) {
@@ -96,12 +96,12 @@
             const modal = document.getElementById(modal_id);
             modal.style.display = 'block';
         }
-    
+
         function closeModal(modal_id) {
             const modal = document.getElementById(modal_id);
             modal.style.display = 'none';
         }
-    
+
         // Close modal if the user clicks outside the modal content
         window.onclick = function (event) {
             const modal = document.getElementById('scheduleModal');
@@ -232,8 +232,6 @@
                 // set default values
                 let selectedFrameOption = document.querySelector('.image-option');
                 selectedFrame(selectedFrameOption);
-
-                document.getElementById('margin').value = "5";
             }
         });
     </script>
@@ -265,7 +263,7 @@
                     </button>
                     <div class="settings-container collapsible-content">
                         <div class="form-group">
-                            
+
                             <div class="form-group nowrap">
                                 <label for="selected-frame" class="form-label">Frame:</label>
                                 <div id="frame-selection" class="image-grid">
@@ -297,8 +295,8 @@
                                 <label for="margin" class="form-label">Right Margin:</label>
                                 <input type="number" class="form-input" id="rightMargin" name="rightMargin" min="0" max="40" step="5">px
                             </div>
-                        </div>    
-                        
+                        </div>
+
                         <!-- Background Color Option -->
                         <div class="form-group">
                             <label class="form-label">Background:</label>
@@ -322,10 +320,10 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Hidden input fields to store existing file data -->
                         <div id="hiddenFileInput"></div>
-                        
+
                         <!-- Text Color Picker -->
                         <div class="form-group">
                             <label for="textColor" class="form-label">Text Color:</label>

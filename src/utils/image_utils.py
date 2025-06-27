@@ -6,6 +6,7 @@ import logging
 import hashlib
 import tempfile
 import subprocess
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +86,61 @@ def compute_image_hash(image):
 def take_screenshot_html(html_str, dimensions, timeout_ms=None):
     image = None
     try:
+        # Check if we're in local development mode from Flask app config
+        is_local_dev = False
+        try:
+            from flask import current_app
+            is_local_dev = current_app.config.get('INKYPI_LOCAL_DEV', False)
+        except RuntimeError:
+            # We're outside of Flask application context, default to production mode
+            is_local_dev = False
+
+        final_html = html_str
+
+        # Only add debug container if we're in local dev mode and debug browser is enabled
+        if is_local_dev:
+            # Parse the existing HTML to add debug styling
+            if '<html>' in html_str.lower():
+                # HTML already has structure, just inject debug styles
+                head_end = html_str.lower().find('</head>')
+                if head_end != -1:
+                    debug_styles = f"""
+                    <style>
+                        /* Debug Browser Constraints */
+                        html, body {{
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            width: {dimensions[0]}px !important;
+                            height: {dimensions[1]}px !important;
+                            overflow: hidden !important;
+                            box-sizing: border-box !important;
+                        }}
+                        body {{
+                            border: 3px solid #ff4444 !important;
+                            position: relative !important;
+                        }}
+                        body::before {{
+                            content: "🔍 DEBUG: {dimensions[0]}×{dimensions[1]} Screenshot Area" !important;
+                            position: absolute !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                            right: 0 !important;
+                            background: rgba(255, 68, 68, 0.9) !important;
+                            color: white !important;
+                            padding: 4px 8px !important;
+                            font-size: 11px !important;
+                            font-family: -apple-system, BlinkMacSystemFont, monospace !important;
+                            font-weight: bold !important;
+                            z-index: 999999 !important;
+                            pointer-events: none !important;
+                            text-align: center !important;
+                        }}
+                    </style>"""
+                    final_html = html_str[:head_end] + debug_styles + html_str[head_end:]
+
         # Create a temporary HTML file
         with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as html_file:
-            html_file.write(html_str.encode("utf-8"))
+            html_file.write(final_html.encode("utf-8"))
             html_file_path = html_file.name
 
         image = take_screenshot(html_file_path, dimensions, timeout_ms)
@@ -155,25 +208,80 @@ def take_screenshot(target, dimensions, timeout_ms=None):
             logger.error("No Chrome/Chromium browser found for screenshots")
             return None
 
-        command = [
-            chrome_cmd, target, "--headless",
-            f"--screenshot={img_file_path}", f'--window-size={dimensions[0]},{dimensions[1]}',
-            "--no-sandbox", "--disable-gpu", "--disable-software-rasterizer",
-            "--disable-dev-shm-usage", "--hide-scrollbars", "--force-device-scale-factor=1"
+        if is_local_dev:
+            # Create a temporary user data directory for isolated Chrome instance
+            with tempfile.TemporaryDirectory() as temp_user_data_dir:
+                # Build the base command - use native ARM on macOS for better performance
+                if sys.platform == "darwin" and chrome_cmd == "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":
+                    # Force native ARM execution on macOS to avoid Rosetta performance issues
+                    base_command = ["arch", "-arm64", chrome_cmd, target]
+                else:
+                    base_command = [chrome_cmd, target]
+
+                command = base_command + [
+                    f"--screenshot={img_file_path}", f'--window-size={dimensions[0]},{dimensions[1]}',
+                    "--headless", "--no-sandbox"
+                ]
+
+                if timeout_ms:
+                    command.append(f"--timeout={timeout_ms}")
+
+                try:
+                    logger.info(f"Opening debug browser window for: {target}")
+                    # Create debug browser command with native ARM on macOS
+                    if sys.platform == "darwin" and chrome_cmd == "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":
+                        debug_base_command = ["arch", "-arm64", chrome_cmd, target]
+                    else:
+                        debug_base_command = [chrome_cmd, target]
+
+                    debug_command = debug_base_command + [
+                        f'--window-size={dimensions[0]},{dimensions[1]}',
+                        "--no-sandbox", "--disable-web-security", "--disable-features=VizDisplayCompositor",
+                        "--new-window"
+                    ]
+
+                    # Launch debug browser in background
+                    subprocess.Popen(debug_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    logger.info("Debug browser opened")
+
+                except Exception as e:
+                    logger.warning(f"Failed to open debug browser (continuing with screenshot): {str(e)}")
+        else:
+            command = [
+                chrome_cmd, target, "--headless",
+                f"--screenshot={img_file_path}", f'--window-size={dimensions[0]},{dimensions[1]}',
+                "--no-sandbox", "--disable-gpu", "--disable-software-rasterizer",
+                "--disable-dev-shm-usage", "--hide-scrollbars", "--force-device-scale-factor=1"
         ]
+
         if timeout_ms:
             command.append(f"--timeout={timeout_ms}")
 
         result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+        # Log the command output for debugging
+        if result.stdout:
+            logger.debug(f"Chrome stdout: {result.stdout.decode('utf-8')}")
+        if result.stderr:
+            logger.debug(f"Chrome stderr: {result.stderr.decode('utf-8')}")
+
         # Check if the process failed or the output file is missing
-        if result.returncode != 0 or not os.path.exists(img_file_path):
-            logger.error("Failed to take screenshot:")
-            logger.error(result.stderr.decode('utf-8'))
+        if result.returncode != 0:
+            logger.error(f"Chrome process failed with return code: {result.returncode}")
+            logger.error(f"Chrome stderr: {result.stderr.decode('utf-8')}")
             return None
+
+        if not os.path.exists(img_file_path):
+            logger.error(f"Screenshot file not created: {img_file_path}")
+            return None
+
+        # Check if the file has content
+        file_size = os.path.getsize(img_file_path)
+        logger.info(f"Screenshot file created: {img_file_path} (size: {file_size} bytes)")
 
         # Load the image using PIL
         image = Image.open(img_file_path)
+        logger.info(f"Screenshot loaded successfully: {image.size}")
 
         # Remove image files
         os.remove(img_file_path)
