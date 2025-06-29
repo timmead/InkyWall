@@ -79,7 +79,7 @@ show_loader() {
   done
   if [[ $? -eq 0 ]]; then
     printf "\r$1 [\e[32m\xE2\x9C\x94\e[0m]\n"
-  else
+  nelse
     printf "\r$1 [\e[31m\xE2\x9C\x98\e[0m]\n"
   fi
 }
@@ -137,7 +137,7 @@ install_app_service() {
 
 install_executable() {
   echo "Adding executable to ${BINPATH}/$APPNAME"
-  cp $SCRIPT_DIR/inkypi $BINPATH/
+  cp $SCRIPT_DIR/$APPNAME $BINPATH/
   sudo chmod +x $BINPATH/$APPNAME
 }
 
