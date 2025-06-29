@@ -90,7 +90,7 @@ def take_screenshot_html(html_str, dimensions, timeout_ms=None):
         is_local_dev = False
         try:
             from flask import current_app
-            is_local_dev = current_app.config.get('INKYPI_LOCAL_DEV', False)
+            is_local_dev = current_app.config.get('INKYWALL_LOCAL_DEV', False)
         except RuntimeError:
             # We're outside of Flask application context, default to production mode
             is_local_dev = False
@@ -168,7 +168,7 @@ def take_screenshot(target, dimensions, timeout_ms=None):
         is_local_dev = False
         try:
             from flask import current_app
-            is_local_dev = current_app.config.get('INKYPI_LOCAL_DEV', False)
+            is_local_dev = current_app.config.get('INKYWALL_LOCAL_DEV', False)
         except RuntimeError:
             # We're outside of Flask application context, default to production mode
             is_local_dev = False

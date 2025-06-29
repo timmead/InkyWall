@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Local setup script for InkyPi development
+Local setup script for InkyWall development
 
-This script sets up the InkyPi project for local development without requiring
+This script sets up the InkyWall project for local development without requiring
 Raspberry Pi hardware. It creates necessary directories and files.
 """
 
@@ -13,7 +13,7 @@ import subprocess
 def setup_local_environment():
     """Setup the local development environment"""
 
-    print("Setting up InkyPi for local development...")
+    print("Setting up InkyWall for local development...")
 
     # Get the project root directory
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -49,7 +49,7 @@ numpy==1.26.4"""
 
     print("\nSetup complete! Next steps:")
     print("1. Install dependencies: pip install -r install/requirements-local.txt")
-    print("2. Run the application: python src/inkypi_local.py")
+    print("2. Run the application: python src/inkywall_local.py")
     print("3. Open your browser to http://localhost:5000")
     print("4. Generated images will be saved in src/static/images/")
 

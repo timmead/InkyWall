@@ -31,7 +31,7 @@ from plugins.plugin_registry import load_plugins
 
 logger = logging.getLogger(__name__)
 
-logger.info("Starting InkyPi local development server")
+logger.info("Starting InkyWall local development server")
 app = Flask(__name__)
 template_dirs = [
    os.path.join(os.path.dirname(__file__), "templates"),    # Default template folder
@@ -51,7 +51,7 @@ app.config['DISPLAY_MANAGER'] = display_manager
 app.config['REFRESH_TASK'] = refresh_task
 
 # Set local development flag in Flask config
-app.config['INKYPI_LOCAL_DEV'] = True
+app.config['INKYWALL_LOCAL_DEV'] = True
 
 # Register Blueprints
 app.register_blueprint(main_bp)
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     from werkzeug.serving import is_running_from_reloader
 
     print("=" * 60)
-    print("InkyPi Local Development Server")
+    print("InkyWall Local Development Server")
     print("=" * 60)
     print(f"Display Type: {device_config.get_config('display_type')}")
     print(f"Resolution: {device_config.get_resolution()}")
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # start the background refresh task - always start it for local development
     refresh_task.start()
 
-    # display default inkypi image on startup
+    # display default inkywall image on startup
     if device_config.get_config("startup") is True:
         logger.info("Startup flag is set, displaying startup image")
         img = generate_startup_image(device_config.get_resolution())

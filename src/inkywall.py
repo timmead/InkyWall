@@ -66,7 +66,7 @@ if __name__ == '__main__':
     if not is_running_from_reloader():
         refresh_task.start()
 
-    # display default inkypi image on startup
+    # display default inkywall image on startup
     if device_config.get_config("startup") is True:
         logger.info("Startup flag is set, displaying startup image")
         img = generate_startup_image(device_config.get_resolution())
