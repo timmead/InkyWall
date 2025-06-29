@@ -105,8 +105,10 @@ class Weather(BasePlugin):
         }
         data['forecast'] = self.parse_forecast(weather_data.get('daily'), tz)
         data['data_points'] = self.parse_data_points(weather_data, aqi_data, tz, units, time_format)
-
+        data['sunrise'] = self.parse_sunrise(weather_data, tz, time_format)
+        data['sunset'] = self.parse_sunset(weather_data, tz, time_format)
         data['hourly_forecast'] = self.parse_hourly(weather_data.get('hourly'), tz, time_format)
+        data['humidity'] = self.parse_humidity(weather_data)
         return data
 
     def parse_forecast(self, daily_forecast, tz):
@@ -159,6 +161,10 @@ class Weather(BasePlugin):
             dt = datetime.fromtimestamp(day["dt"], tz=timezone.utc).astimezone(tz)
             day_label = dt.strftime("%a")
 
+            # --- probability of precipitation ---
+            pop = float(day.get("pop"))     # [0.0–1.0]
+            pop_pct = f"{pop * 100:.0f}"
+
             forecast.append(
                 {
                     "day": day_label,
@@ -167,12 +173,17 @@ class Weather(BasePlugin):
                     "icon": weather_icon_path,
                     "moon_phase_pct": moon_pct,
                     "moon_phase_icon": moon_icon_path,
+                    "pop_pct": pop_pct,
+                    "rain": float(day.get("rain", 0)),
+                    "rain_icon": self.get_plugin_dir(f"icons/humidity.png")
                 }
             )
 
         return forecast
 
     def parse_hourly(self, hourly_forecast, tz, time_format):
+        logger.info(f"Starting hour: {datetime.fromtimestamp(hourly_forecast[0].get('dt'), tz=timezone.utc).astimezone(tz).strftime('%Y-%m-%d %H:%M')}")
+
         hourly = []
         for hour in hourly_forecast[:24]:
             dt = datetime.fromtimestamp(hour.get('dt'), tz=timezone.utc).astimezone(tz)
@@ -184,8 +195,7 @@ class Weather(BasePlugin):
             hourly.append(hour_forecast)
         return hourly
 
-    def parse_data_points(self, weather, air_quality, tz, units, time_format):
-        data_points = []
+    def parse_sunrise(self, weather, tz, time_format):
         sunrise_epoch = weather.get('current', {}).get("sunrise")
 
         if sunrise_epoch:
@@ -196,15 +206,16 @@ class Weather(BasePlugin):
             else:
                 sunrise_time = sunrise_dt.strftime('%I:%M').lstrip("0")
                 sunrise_unit = sunrise_dt.strftime('%p')
-            data_points.append({
+            return ({
                 "label": "Sunrise",
                 "measurement": sunrise_time,
                 "unit": sunrise_unit,
-                "icon": self.get_plugin_dir('icons/sunrise.png')
+                "icon": '⬆'
             })
         else:
             logging.error(f"Sunrise not found in OpenWeatherMap response, this is expected for polar areas in midnight sun and polar night periods.")
 
+    def parse_sunset(self, weather, tz, time_format):
         sunset_epoch = weather.get('current', {}).get("sunset")
         if sunset_epoch:
             sunset_dt = datetime.fromtimestamp(sunset_epoch, tz=timezone.utc).astimezone(tz)
@@ -214,14 +225,20 @@ class Weather(BasePlugin):
             else:
                 sunset_time = sunset_dt.strftime('%I:%M').lstrip("0")
                 sunset_unit = sunset_dt.strftime('%p')
-            data_points.append({
+            return ({
                 "label": "Sunset",
                 "measurement": sunset_time,
                 "unit": sunset_unit,
-                "icon": self.get_plugin_dir('icons/sunset.png')
+                "icon": '⬇'
             })
         else:
             logging.error(f"Sunset not found in OpenWeatherMap response, this is expected for polar areas in midnight sun and polar night periods.")
+
+    def parse_humidity(self, weather):
+        return weather.get('current', {}).get("humidity")
+
+    def parse_data_points(self, weather, air_quality, tz, units, time_format):
+        data_points = []
 
         data_points.append({
             "label": "Wind",
@@ -302,9 +319,9 @@ class Weather(BasePlugin):
     def format_time(self, dt, time_format, include_am_pm=True):
         """Format datetime based on 12h or 24h preference"""
         if time_format == "24h":
-            return dt.strftime("%H:%M")
+            return dt.strftime("%Hh")
         else:  # 12h format
             if include_am_pm:
-                return dt.strftime("%-I:%M %p")
+                return dt.strftime("%-I%p")
             else:
-                return dt.strftime("%-I:%M")
+                return dt.strftime("%-I")
